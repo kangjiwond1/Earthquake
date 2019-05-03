@@ -1,0 +1,39 @@
+library(ggplot2)
+library(dplyr)
+library(raster) 
+library(rgeos)
+library(maptools)
+
+mnt <- read.table(choose.files(),header=T,sep=",")
+
+head(mnt)
+str(mnt)
+mnt$id <- as.character(mnt$id)
+
+mnt_1 <- mnt %>% select(발생장소_시도,피해면적_합계,id)
+str(mnt_1)
+
+mnt_2 <- mnt_1 %>% group_by(발생장소_시도) %>% summarize(시도별피해면적 = sum(피해면적_합계))
+mnt_2
+
+mnt_2 <- left_join(mnt_1,mnt_2,by="발생장소_시도")
+head(mnt_2)
+
+mnt_2 <- mnt_2 %>% group_by(id) %>% summarize(시도별피해면적 = mean(시도별피해면적)) %>% arrange(desc(시도별피해면적))
+mnt_2
+
+kor.map.new <- shapefile(choose.files())
+gg.map <- spTransform(kor.map.new, CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+gg.map <- fortify(gg.map,regin="id")
+head(gg.map)
+
+str(mnt_2)
+mnt_2 <- data.frame(mnt_2)
+str(mnt_2)
+
+result <- left_join(gg.map,mnt_2,by="id")
+head(result)
+str(result)
+
+map1 <- ggplot(data=result) + geom_polygon(aes(x=long,y=lat,group=group,fill=시도별피해면적))
+map1
